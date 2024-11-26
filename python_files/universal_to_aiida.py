@@ -1,6 +1,3 @@
-# In[ ]:
-
-
 from aiida import orm, load_profile
 
 load_profile()
@@ -11,9 +8,13 @@ from jobflow.managers.local import run_locally
 
 from rich.pretty import pprint
 
-from universal_functions import group_edges_dict, get_input_dict, get_workflow, universal_reduce
+from universal_functions import (
+    group_edges_dict,
+    get_input_dict,
+    get_workflow,
+    universal_reduce,
+)
 
-# In[ ]:
 
 # Actual tasks
 
@@ -27,10 +28,6 @@ def add_xy(x, y):
 def add_xyz(x, y, z):
     return x + y + z
 
-
-
-
-# In[ ]:
 
 # Actually running the workflow
 
@@ -67,7 +64,7 @@ task_lst = get_workflow(
     nodes_dict=nodes_updated_dict,
     input_dict=input_dict,
     total_dict=total_dict,
-    backend='aiida'
+    backend="aiida",
 )
 
 raise SystemExit
@@ -76,11 +73,5 @@ raise SystemExit
 flow = Flow(task_lst)
 
 
-# In[ ]:
-
-
 result = run_locally(flow)
 result
-
-
-# In[ ]:

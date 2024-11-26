@@ -208,3 +208,13 @@ def get_workflow(nodes_dict, input_dict, total_dict, backend: str = 'aiida'):
             # }
             memory_dict[k] = fn(**kwargs)
     return list(memory_dict.values())
+
+# pyiron_workflow
+def create_input_nodes(nodes_dict, edges_lst):
+    node_conversion_dict = {
+        ed["source"]: ed["targetHandle"]
+        for ed in edges_lst
+        if ed["sourceHandle"] is None
+    }
+    nodes_to_create_dict = {v: nodes_dict[k] for k, v in node_conversion_dict.items()}
+    return nodes_to_create_dict, node_conversion_dict
