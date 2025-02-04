@@ -40,8 +40,6 @@ scf_input_dict = orm.Dict(
     }
 )
 
-wg_eos = WorkGraph("my_workflow")
-
 
 @task.calcfunction(outputs=[{"name": "structure"}])
 def get_bulk_structure(element: orm.Str, a: orm.Float, cubic: orm.Bool):
@@ -55,7 +53,7 @@ def generate_structures(structure: orm.StructureData, strain_lst: orm.List):
     structure_lst = []
     for strain in strain_lst:
         atoms = structure.get_ase()
-        structure_strain = atoms.copy()  # Atoms(**structure)
+        structure_strain = atoms.copy()
         structure_strain.set_cell(
             structure_strain.cell * strain ** (1 / 3), scale_atoms=True
         )
@@ -93,7 +91,7 @@ def write_input(
     shutil.copy(src=pseudo_path / pseudopotentials["Al"], dst=working_directory.value)
     write(
         filename=filename,
-        images=Atoms(**atoms.todict()),
+        images=atoms,
         Crystal=True,
         kpts=python_dict["kpts"],
         input_data={
@@ -159,7 +157,7 @@ def all_scf(structures, input_dict):
     for key, structure in structures.items():
         relax_task = wg.add_task(
             calculate_qe,
-            name=f"qe_{key}",
+            name=f"scf_{key}",
             working_directory=orm.Str(key),
             structure=structure,
             input_dict=input_dict,
@@ -176,11 +174,8 @@ def all_scf(structures, input_dict):
 def plot_energy_volume_curve(**datas):
     volume_lst, energy_lst = [], []
     for key, data in datas.items():
-        volume_lst.append(data["volume"])
-        energy_lst.append(data["energy"])
-
-    volume_lst = [v.value for v in volume_lst]
-    energy_lst = [e.value for e in energy_lst]
+        volume_lst.append(data["volume"].value)
+        energy_lst.append(data["energy"].value)
 
     plt.plot(volume_lst, energy_lst)
     plt.xlabel("Volume")
