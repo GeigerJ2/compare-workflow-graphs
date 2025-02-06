@@ -4,6 +4,7 @@ import shutil
 import subprocess
 
 import matplotlib.pyplot as plt
+from pickle import loads
 from adis_tools.parsers import parse_pw
 from aiida import load_profile, orm
 from aiida_workgraph import WorkGraph, task
@@ -218,3 +219,35 @@ all_scf_task = wg_eos.add_task(
 plot_task = wg_eos.add_task(plot_energy_volume_curve, datas=all_scf_task.outputs.result)
 
 wg_eos.run()
+raise SystemExit()
+
+
+
+work_graph_dict = wg_eos.to_dict()
+
+
+edges_label_lst = []
+for link_dict in work_graph_dict["links"]:
+    if link_dict['from_socket'] == "result":
+        edges_label_lst.append({'target': link_dict['to_node'], 'targetHandle': link_dict['to_socket'], 'source': link_dict['from_node'], 'sourceHandle': None})
+    else:
+        edges_label_lst.append({'target': link_dict['to_node'], 'targetHandle': link_dict['to_socket'], 'source': link_dict['from_node'], 'sourceHandle': link_dict['from_socket']})
+
+print(edges_label_lst)
+
+kwargs_dict, function_dict = {}, {}
+for task_name, task_dict in work_graph_dict["tasks"].items():
+    input_variables = [
+        input_parameter
+        for input_parameter in task_dict['inputs'].keys()
+        if not input_parameter.startswith("metadata") and not input_parameter.startswith("_wait")
+    ]
+    input_kwargs = {
+        input_parameter: task_dict['inputs'][input_parameter]['property']["value"].value if isinstance(task_dict['inputs'][input_parameter]['property']["value"], dict) else task_dict['inputs'][input_parameter]['property']["value"]
+        for input_parameter in input_variables
+    }
+    kwargs_dict[task_name] = input_kwargs
+    function_dict[task_name] = loads(task_dict['executor']['executor']).process_class._func
+
+print(kwargs_dict)
+print(function_dict)
