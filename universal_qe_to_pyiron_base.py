@@ -1,18 +1,15 @@
-
 from pyiron_base import Project
 
 from from_universal_funcs_pyiron import (
     get_delayed_object_dict,
     get_dict,
-    # get_kwargs,
     get_list,
-    # get_source,
     get_source_handles,
     group_edges,
     resort_total_lst,
 )
 
-from to_universal_funcs_pyiron import (
+from calculate_funcs_pyiron import (
     calculate_qe,
     get_bulk_structure,
     generate_structures,
@@ -190,7 +187,6 @@ edges_new_lst = [
 pr = Project("test")
 pr.remove_jobs(recursive=True, silently=True)
 
-
 total_lst = group_edges(edges_new_lst)
 
 
@@ -206,7 +202,6 @@ delayed_object_dict = get_delayed_object_dict(
     source_handle_dict=source_handle_dict,
     pyiron_project=pr,
 )
-
 
 delayed_object_dict[list(delayed_object_dict.keys())[-1]].draw()
 

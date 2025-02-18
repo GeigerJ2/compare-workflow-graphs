@@ -2,14 +2,17 @@ import ipdb
 import numpy as np
 from pyiron_base import Project, job
 
-from to_universal_funcs_pyiron import (
+from calculate_funcs_pyiron import (
     calculate_qe,
     generate_structures,
     get_bulk_structure,
+    plot_energy_volume_curve,
+)
+
+from to_universal_funcs_pyiron import (
     get_connection_dict,
     get_nodes,
     get_unique_objects,
-    plot_energy_volume_curve,
     remove_server_obj,
 )
 

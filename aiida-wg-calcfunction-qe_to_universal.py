@@ -42,7 +42,7 @@ scf_input_dict = orm.Dict(
 )
 
 
-# ? Why does
+# ? Why does this not work, but directly decorating the function definition does work
 # get_bulk_structure = task.calcfunction(outputs=[{"name": "structure"}])(
 #     get_bulk_structure
 # )
@@ -56,6 +56,7 @@ generate_structures = task.calcfunction(outputs=[{"name": "structures"}])(
     generate_structures
 )
 
+ipdb.set_trace()
 
 collect_output = task.calcfunction(
     outputs=[{"name": "structure"}, {"name": "energy"}, {"name": "volume"}]
