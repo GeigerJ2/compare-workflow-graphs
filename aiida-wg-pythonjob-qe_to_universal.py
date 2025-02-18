@@ -1,3 +1,8 @@
+
+# ! Specify Python Code manually to point to executable of my Python venv
+# !
+
+
 from pathlib import Path
 import subprocess
 from typing import Any
@@ -10,7 +15,11 @@ from ase.io import write
 
 from aiida import load_profile, orm
 from aiida_workgraph import WorkGraph, task
-
+from atomistic_engine_unification.calculate_funcs_aiida_wg_pythonjob import (
+    get_bulk_structure,
+    calculate_qe,
+    generate_structures,
+)
 
 load_profile()
 
@@ -30,16 +39,11 @@ relax_input_dict = {
     "smearing": 0.02,
 }
 
-
 # @task.pythonjob(outputs=[{"name": "structure"}])
-def get_bulk_structure(element: str, a: float, cubic: bool):
-    from ase.build import bulk
-
-    atoms = bulk(name=element, a=a, cubic=cubic)
-    return {"structure": atoms}
-
-
-get_bulk_structure = task.pythonjob(outputs=[{"name": "structure"}])(get_bulk_structure)
+# def get_bulk_strcuture(): ...
+get_bulk_structure_dec = task.pythonjob(outputs=[{"name": "structure"}])(
+    get_bulk_structure
+)
 
 
 # @task.pythonjob(
@@ -51,22 +55,10 @@ get_bulk_structure = task.pythonjob(outputs=[{"name": "structure"}])(get_bulk_st
 #         }
 #     ]
 # )
-def generate_structures(
-    structure: Atoms, strain_lst: list[float]
-) -> dict[str, dict[str, Atoms]]:
-    structure_lst = []
-    for strain in strain_lst:
-        structure_strain = structure.copy()
-        structure_strain.set_cell(
-            structure_strain.cell * strain ** (1 / 3), scale_atoms=True
-        )
-        structure_lst.append(structure_strain)
-
-    return_dict = {f"qe_{str(i)}": atoms for i, atoms in enumerate(structure_lst)}
-    return {"scaled_atoms": return_dict}
+# def generate_structures(): ...
 
 
-generate_structures = task.pythonjob(
+generate_structures_dec = task.pythonjob(
     outputs=[
         {
             "name": "scaled_atoms",
@@ -77,118 +69,67 @@ generate_structures = task.pythonjob(
 )(generate_structures)
 
 
-# @task.pythonjob()
-# ! Possibly pass structure via input_dict
-# ! Must be defined inside function that is converted to PythonJob, or discoverable by import from installed module
-# def write_input(
-#     input_dict: dict[str, Any], structure: Atoms, working_directory: str | Path
-# ):
-#     filename = os.path.join(working_directory, "input.pwi")
-#     os.makedirs(working_directory, exist_ok=True)
+# @task.pythonjob(
+#     outputs=[
+#         {"name": "structure"},
+#         {"name": "energy"},
+#         {"name": "volume"},
+#     ]
+# )
+# def calculate_qe(): ...
 
-#     pseudopotentials = input_dict["pseudopotentials"]
-#     shutil.copy(src=pseudo_path / pseudopotentials["Al"], dst=working_directory)
-
-#     write(
-#         filename=filename,
-#         images=structure,
-#         Crystal=True,
-#         kpts=input_dict["kpts"],
-#         input_data={
-#             "calculation": input_dict["calculation"],
-#             "occupations": "smearing",
-#             "degauss": input_dict["smearing"],
-#             "pseudo_dir": "./",
-#         },
-#         pseudopotentials=pseudopotentials,
-#         tstress=True,
-#         tprnfor=True,
-#     )
-
-# def collect_output(working_directory="."):
-#     output = parse_pw(os.path.join(working_directory, "pwscf.xml"))
-#     return {
-#         "structure": output["ase_structure"].todict(),  # ? `todict`
-#         "energy": output["energy"],
-#         "volume": output["ase_structure"].get_volume(),
-#     }
-
-
-@task.pythonjob(
+calculate_qe_dec = task.pythonjob(
     outputs=[
         {"name": "structure"},
         {"name": "energy"},
         {"name": "volume"},
     ]
-)
-def calculate_qe(working_directory, input_dict, structure):
-    # Possibly don't even define individual functions, but make everything one function
+)(calculate_qe)
 
-    from pathlib import Path
-    from ase import Atoms
-    from typing import Any
-    import os
-    import sys
-    import shutil
-    import subprocess
-    from ase.io import write
+#region
+# @task.pythonjob(
+#     outputs=[{"name": "result", "from": "context.result"}],
+# )
+# def all_scf(structures, input_dict):
 
-    def _write_input(input_dict: dict, structure: Atoms, working_directory: str | Path):
-        filename = os.path.join(working_directory, "input.pwi")
-        os.makedirs(working_directory, exist_ok=True)
+# Outputs        PK    Type
+# -------------  ----  ----------
+# scaled_atoms
+#     qe_0       3080  AtomsData
+#     qe_1       3081  AtomsData
+#     qe_2       3082  AtomsData
+#     qe_3       3083  AtomsData
+#     qe_4       3084  AtomsData
+# remote_folder  3078  RemoteData
+# retrieved      3079  FolderData
 
-        pseudopotentials = input_dict["pseudopotentials"]
-        pseudo_path = Path(
-            "/home/geiger_j/aiida_projects/adis/git-repos/compare-workflow-graphs/pseudos"
-        )
-        shutil.copy(src=pseudo_path / pseudopotentials["Al"], dst=working_directory)
+# Caller                 PK  Type
+# -------------------  ----  ---------------
+# generate_structures  3057  WorkGraph<test>
 
-        write(
-            filename=filename,
-            images=structure,
-            Crystal=True,
-            kpts=input_dict["kpts"],
-            input_data={
-                "calculation": input_dict["calculation"],
-                "occupations": "smearing",
-                "degauss": input_dict["smearing"],
-                "pseudo_dir": "./",
-            },
-            pseudopotentials=pseudopotentials,
-            tstress=True,
-            tprnfor=True,
-        )
+# for key, structure in structures.items():
 
-    def _collect_output(working_directory="."):
-        # FIXME: Installed it in OS Python for now, until I know how to use specific Python venv
-        from adis_tools.parsers import parse_pw
+#     relax_task = wg.add_task(
+#         calculate_qe,
+#         name=f"scf_{key}",
+#         working_directory=orm.Str(key),
+#         structure=structure,
+#         input_dict=input_dict,
+#     )
 
-        output = parse_pw(os.path.join(working_directory, "pwscf.xml"))
-        return {
-            # "structure": output["ase_structure"].todict(),
-            "structure": output["ase_structure"],
-            "energy": output["energy"],
-            "volume": output["ase_structure"].get_volume(),
-        }
+#     relax_task.set_context({f"result.{key}.structure": "structure"})
+#     relax_task.set_context({f"result.{key}.energy": "energy"})
+#     relax_task.set_context({f"result.{key}.volume": "volume"})
 
-    _write_input(
-        input_dict=input_dict,
-        working_directory=working_directory,
-        structure=structure,
-    )
-    subprocess.check_output(
-        "mpirun -np 1 pw.x -in input.pwi > output.pwo",
-        cwd=working_directory,
-        shell=True,
-    )
+# return wg
 
-    return _collect_output(working_directory=working_directory)
-
+# ipdb.set_trace()
+#endregion
 
 wg = WorkGraph("test")
 
 get_bulk_structure_task = wg.add_task(
-    get_bulk_structure,
+    get_bulk_structure_dec,
     name="get_bulk_structure",
     element="Al",
     a=4.05,
@@ -196,43 +137,19 @@ get_bulk_structure_task = wg.add_task(
 )
 
 relax_task = wg.add_task(
-    calculate_qe,
+    calculate_qe_dec,
     name="relax",
     structure=get_bulk_structure_task.outputs.structure,
     input_dict=relax_input_dict,
     working_directory="relax",
 )
 
-generate_structures_task = wg.add_task(
-    generate_structures,
-    name="generate_structures",
-    structure=relax_task.outputs.structure,
-    strain_lst=strain_lst,
-)
+# generate_structures_task = wg.add_task(
+#     generate_structures_dec,
+#     name="generate_structures",
+#     structure=relax_task.outputs.structure,
+#     strain_lst=strain_lst,
+# )
+
 
 wg.run()
-
-
-# ! `to_dict` returns np arrays, and importantly a numpy boolean array for PBC that cannot be serialized:
-# ```
-# In [3]: atoms
-# Out[3]: Atoms(symbols='Al4', pbc=True, cell=[4.05, 4.05, 4.05])
-
-# In [4]: atoms.todict()
-# Out[4]:
-# {'numbers': array([13, 13, 13, 13]),
-# 'positions': array([[0.   , 0.   , 0.   ],
-#         [0.   , 2.025, 2.025],
-#         [2.025, 0.   , 2.025],
-#         [2.025, 2.025, 0.   ]]),
-# 'cell': array([[4.05, 0.  , 0.  ],
-#         [0.  , 4.05, 0.  ],
-#         [0.  , 0.  , 4.05]]),
-# 'pbc': array([ True,  True,  True])}
-
-# In [5]: atoms.todict()['pbc'][0]
-# Out[5]: True
-
-# In [6]: type(atoms.todict()['pbc'][0])
-# Out[6]: numpy.bool_
-# ```
