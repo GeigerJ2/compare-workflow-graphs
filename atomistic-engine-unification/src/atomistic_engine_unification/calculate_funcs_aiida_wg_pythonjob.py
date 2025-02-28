@@ -14,6 +14,7 @@ def get_bulk_structure(element: str, a: float, cubic: bool):
     from ase.build import bulk
 
     atoms = bulk(name=element, a=a, cubic=cubic)
+    # Do I even need to wrap this in a dict?
     return {"structure": atoms}
 
 
@@ -75,8 +76,8 @@ def calculate_qe(working_directory, input_dict, structure):
         from adis_tools.parsers import parse_pw
 
         output = parse_pw(os.path.join(working_directory, "pwscf.xml"))
+
         return {
-            # "structure": output["ase_structure"].todict(),
             "structure": output["ase_structure"],
             "energy": output["energy"],
             "volume": output["ase_structure"].get_volume(),

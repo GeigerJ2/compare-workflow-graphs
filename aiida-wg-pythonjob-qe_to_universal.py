@@ -1,10 +1,10 @@
-
 # ! Specify Python Code manually to point to executable of my Python venv
 # !
 
 
 from pathlib import Path
 import subprocess
+from turtle import st
 from typing import Any
 import shutil
 import os
@@ -23,12 +23,40 @@ from atomistic_engine_unification.calculate_funcs_aiida_wg_pythonjob import (
 
 load_profile()
 
+def serialize_dict(d, indent=0):
+    result = "{\n"
+    for key, value in d.items():
+        result += " " * (indent + 4) + f"'{key}': "
+        if isinstance(value, dict):
+            result += serialize_dict(value, indent + 4)
+        elif isinstance(value, str):
+            result += f"'{value}'"
+        # elif isinstance(value, Atoms):
+        #     from aiida_pythonjob.data.atoms import atoms2dict
+        #     result += 
+        else:
+            result += str(value)
+        result += ",\n"
+    result += " " * indent + "}"
+    return result
+
 pseudopotentials = {"Al": "Al.pbe-n-kjpaw_psl.1.0.0.UPF"}
 pseudo_path = Path(
     "/home/geiger_j/aiida_projects/adis/git-repos/compare-workflow-graphs/pseudos"
 )
 # pseudo_path = pathlib.Path.cwd() / "pseudos"
-strain_lst = [0.9, 0.95, 1, 1.05, 1.10]
+# strain_lst = [0.9, 0.95, 1, 1.05, 1.10]
+strain_lst = [0.9, 1]
+
+scf_input_dict = {
+    "pseudopotentials": pseudopotentials,
+    "kpts": (1, 1, 1),  # (3, 3, 3),
+    # "kpts": (3, 3, 3),
+    "calculation": "scf",  # "vc-relax",
+    # "calculation": "vc-relax",
+    "smearing": 0.02,
+}
+
 
 relax_input_dict = {
     "pseudopotentials": pseudopotentials,
@@ -45,7 +73,7 @@ get_bulk_structure_dec = task.pythonjob(outputs=[{"name": "structure"}])(
     get_bulk_structure
 )
 
-
+# region
 # @task.pythonjob(
 #     outputs=[
 #         {
@@ -56,7 +84,7 @@ get_bulk_structure_dec = task.pythonjob(outputs=[{"name": "structure"}])(
 #     ]
 # )
 # def generate_structures(): ...
-
+# endregion
 
 generate_structures_dec = task.pythonjob(
     outputs=[
@@ -68,7 +96,7 @@ generate_structures_dec = task.pythonjob(
     ]
 )(generate_structures)
 
-
+# region
 # @task.pythonjob(
 #     outputs=[
 #         {"name": "structure"},
@@ -77,6 +105,7 @@ generate_structures_dec = task.pythonjob(
 #     ]
 # )
 # def calculate_qe(): ...
+# endregion
 
 calculate_qe_dec = task.pythonjob(
     outputs=[
@@ -86,46 +115,7 @@ calculate_qe_dec = task.pythonjob(
     ]
 )(calculate_qe)
 
-#region
-# @task.pythonjob(
-#     outputs=[{"name": "result", "from": "context.result"}],
-# )
-# def all_scf(structures, input_dict):
-
-# Outputs        PK    Type
-# -------------  ----  ----------
-# scaled_atoms
-#     qe_0       3080  AtomsData
-#     qe_1       3081  AtomsData
-#     qe_2       3082  AtomsData
-#     qe_3       3083  AtomsData
-#     qe_4       3084  AtomsData
-# remote_folder  3078  RemoteData
-# retrieved      3079  FolderData
-
-# Caller                 PK  Type
-# -------------------  ----  ---------------
-# generate_structures  3057  WorkGraph<test>
-
-# for key, structure in structures.items():
-
-#     relax_task = wg.add_task(
-#         calculate_qe,
-#         name=f"scf_{key}",
-#         working_directory=orm.Str(key),
-#         structure=structure,
-#         input_dict=input_dict,
-#     )
-
-#     relax_task.set_context({f"result.{key}.structure": "structure"})
-#     relax_task.set_context({f"result.{key}.energy": "energy"})
-#     relax_task.set_context({f"result.{key}.volume": "volume"})
-
-# return wg
-
-# ipdb.set_trace()
-#endregion
-
+# region
 wg = WorkGraph("test")
 
 get_bulk_structure_task = wg.add_task(
@@ -144,12 +134,58 @@ relax_task = wg.add_task(
     working_directory="relax",
 )
 
-# generate_structures_task = wg.add_task(
-#     generate_structures_dec,
-#     name="generate_structures",
-#     structure=relax_task.outputs.structure,
-#     strain_lst=strain_lst,
+generate_structures_task = wg.add_task(
+    generate_structures_dec,
+    name="generate_structures",
+    structure=relax_task.outputs.structure,
+    strain_lst=strain_lst,
+)
+# endregion
+
+# TODO: Try also just normal code here, appending to WG within the for-loop
+# TODO: Also try to build an all_scf WG and pass it as a task
+
+def all_scf(structures, input_dict):
+    # Possibly, in this solution, the links of the individual SCF calcs are not resolved in the repr
+    from atomistic_engine_unification.calculate_funcs_aiida_wg_pythonjob import calculate_qe
+
+    qe_results = {}
+    for key, structure in structures.items():
+        ...
+        qe_result = calculate_qe(
+            working_directory=key, structure=structure, input_dict=input_dict
+        )
+        qe_results[key] = qe_result
+
+    # return qe_results
+    return {'test': 5}
+
+# all_scf_run = all_scf(
+#     structures={
+#         str(i): get_bulk_structure(element="Al", a=4.05, cubic=True)["structure"]
+#         for i in range(2)
+#     },
+#     input_dict=scf_input_dict,
 # )
 
+all_scf_dec = task.pythonjob(
+    outputs=[
+        {
+            # "name": "qe_results",
+            # "identifier": "workgraph.namespace",
+            # "metadata": {"dynamic": True},
+            "name": 'test'
+        }
+    ]
+)(all_scf)
+
+# import ipdb; ipdb.set_trace()
+
+all_scf_task = wg.add_task(
+    all_scf_dec,
+    name='all_scf',
+    structures=generate_structures_task.outputs.scaled_atoms,
+    input_dict=scf_input_dict
+)
 
 wg.run()
