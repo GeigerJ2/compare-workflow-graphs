@@ -157,8 +157,8 @@ def all_scf(structures, input_dict):
         )
         qe_results[key] = qe_result
 
-    # return qe_results
-    return {'test': 5}
+    return qe_results
+    # return {'test': 5}
 
 # all_scf_run = all_scf(
 #     structures={
@@ -171,15 +171,15 @@ def all_scf(structures, input_dict):
 all_scf_dec = task.pythonjob(
     outputs=[
         {
-            # "name": "qe_results",
-            # "identifier": "workgraph.namespace",
-            # "metadata": {"dynamic": True},
-            "name": 'test'
+            "name": "qe_results",
+            "identifier": "workgraph.namespace",
+            "metadata": {"dynamic": True},
+            # "name": 'test'
         }
     ]
 )(all_scf)
 
-# import ipdb; ipdb.set_trace()
+import ipdb; ipdb.set_trace()
 
 all_scf_task = wg.add_task(
     all_scf_dec,
