@@ -151,7 +151,6 @@ def all_scf(structures, input_dict):
 
     qe_results = {}
     for key, structure in structures.items():
-        ...
         qe_result = calculate_qe(
             working_directory=key, structure=structure, input_dict=input_dict
         )
@@ -179,7 +178,7 @@ all_scf_dec = task.pythonjob(
     ]
 )(all_scf)
 
-import ipdb; ipdb.set_trace()
+# import ipdb; ipdb.set_trace()
 
 all_scf_task = wg.add_task(
     all_scf_dec,
