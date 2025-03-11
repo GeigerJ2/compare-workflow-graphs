@@ -33,7 +33,7 @@ def serialize_dict(d, indent=0):
             result += f"'{value}'"
         # elif isinstance(value, Atoms):
         #     from aiida_pythonjob.data.atoms import atoms2dict
-        #     result += 
+        #     result +=
         else:
             result += str(value)
         result += ",\n"
@@ -144,6 +144,8 @@ generate_structures_task = wg.add_task(
 
 # TODO: Try also just normal code here, appending to WG within the for-loop
 # TODO: Also try to build an all_scf WG and pass it as a task
+# TODO: `return_atoms` optional
+# TODO: Convert Atoms into pure dict, also replacing np.bool
 
 def all_scf(structures, input_dict):
     # Possibly, in this solution, the links of the individual SCF calcs are not resolved in the repr
@@ -151,6 +153,8 @@ def all_scf(structures, input_dict):
 
     qe_results = {}
     for key, structure in structures.items():
+        # print(key, structure)
+        # import ipdb; ipdb.set_trace()
         qe_result = calculate_qe(
             working_directory=key, structure=structure, input_dict=input_dict
         )
@@ -171,9 +175,8 @@ all_scf_dec = task.pythonjob(
     outputs=[
         {
             "name": "qe_results",
-            "identifier": "workgraph.namespace",
-            "metadata": {"dynamic": True},
-            # "name": 'test'
+            # "identifier": "workgraph.namespace",
+            # "metadata": {"dynamic": True},
         }
     ]
 )(all_scf)

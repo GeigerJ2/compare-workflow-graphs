@@ -71,17 +71,24 @@ def calculate_qe(working_directory, input_dict, structure):
             tprnfor=True,
         )
 
-    def _collect_output(working_directory="."):
+    def _collect_output(working_directory="."):  # , return_atoms=True):
         # FIXME: Installed it in OS Python for now, until I know how to use specific Python venv in PythonJob
         from adis_tools.parsers import parse_pw
 
         output = parse_pw(os.path.join(working_directory, "pwscf.xml"))
-
+        # if return_atoms:
         return {
             "structure": output["ase_structure"],
             "energy": output["energy"],
             "volume": output["ase_structure"].get_volume(),
         }
+        # else:
+        #     return {
+        #         "energy": output["energy"],
+        #         "volume": output["ase_structure"].get_volume(),
+        #     }
+
+    # import ipdb; ipdb.set_trace()
 
     _write_input(
         input_dict=input_dict,
@@ -94,7 +101,11 @@ def calculate_qe(working_directory, input_dict, structure):
         shell=True,
     )
 
-    return _collect_output(working_directory=working_directory)
+    outputs = _collect_output(working_directory=working_directory)
+
+    import ipdb; ipdb.set_trace()
+
+    return outputs
 
 
 # ! `to_dict` returns np arrays, and importantly a numpy boolean array for PBC that cannot be serialized:
