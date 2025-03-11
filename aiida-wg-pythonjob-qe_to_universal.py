@@ -18,35 +18,37 @@ from atomistic_engine_unification.calculate_funcs_aiida_wg_pythonjob import (
     get_bulk_structure,
     calculate_qe,
     generate_structures,
-    # plot_energy_volume_curve
+    plot_energy_volume_curve
 )
 
 load_profile()
 
-def serialize_dict(d, indent=0):
-    result = "{\n"
-    for key, value in d.items():
-        result += " " * (indent + 4) + f"'{key}': "
-        if isinstance(value, dict):
-            result += serialize_dict(value, indent + 4)
-        elif isinstance(value, str):
-            result += f"'{value}'"
-        # elif isinstance(value, Atoms):
-        #     from aiida_pythonjob.data.atoms import atoms2dict
-        #     result +=
-        else:
-            result += str(value)
-        result += ",\n"
-    result += " " * indent + "}"
-    return result
+# region
+# def serialize_dict(d, indent=0):
+#     result = "{\n"
+#     for key, value in d.items():
+#         result += " " * (indent + 4) + f"'{key}': "
+#         if isinstance(value, dict):
+#             result += serialize_dict(value, indent + 4)
+#         elif isinstance(value, str):
+#             result += f"'{value}'"
+#         # elif isinstance(value, Atoms):
+#         #     from aiida_pythonjob.data.atoms import atoms2dict
+#         #     result +=
+#         else:
+#             result += str(value)
+#         result += ",\n"
+#     result += " " * indent + "}"
+#     return result
+# endregion
 
 pseudopotentials = {"Al": "Al.pbe-n-kjpaw_psl.1.0.0.UPF"}
 pseudo_path = Path(
     "/home/geiger_j/aiida_projects/adis/git-repos/compare-workflow-graphs/pseudos"
 )
 # pseudo_path = pathlib.Path.cwd() / "pseudos"
-# strain_lst = [0.9, 0.95, 1, 1.05, 1.10]
-strain_lst = [0.9, 1]
+strain_lst = [0.9, 0.95, 1, 1.05, 1.10]
+# strain_lst = [0.9, 1]
 
 scf_input_dict = {
     "pseudopotentials": pseudopotentials,
@@ -62,8 +64,8 @@ relax_input_dict = {
     "pseudopotentials": pseudopotentials,
     "kpts": (1, 1, 1),  # (3, 3, 3),
     # "kpts": (3, 3, 3),
-    "calculation": "scf",  # "vc-relax",
-    # "calculation": "vc-relax",
+    # "calculation": "scf",  # "vc-relax",
+    "calculation": "vc-relax",
     "smearing": 0.02,
 }
 
@@ -114,6 +116,8 @@ calculate_qe_dec = task.pythonjob(
         {"name": "volume"},
     ]
 )(calculate_qe)
+
+plot_energy_volume_curve_dec = task.pythonjob()(plot_energy_volume_curve)
 
 # region
 wg = WorkGraph("test")
@@ -190,9 +194,14 @@ all_scf_task = wg.add_task(
     input_dict=scf_input_dict
 )
 
+plot_energy_volume_curve_task = wg.add_task(
+    plot_energy_volume_curve_dec,
+    name='plot_energy_volume_curve',
+    qe_results=all_scf_task.outputs.qe_results,
+)
 
-d = wg.to_dict()
+# d = wg.to_dict()
 
-import ipdb; ipdb.set_trace()
+# import ipdb; ipdb.set_trace()
 
 wg.run()

@@ -19,11 +19,13 @@ def get_bulk_structure(element: str, a: float, cubic: bool):
 
 
 def generate_structures(
-    structure: Atoms, strain_lst: list[float]
+    structure: dict, strain_lst: list[float]
 ) -> dict[str, dict[str, Atoms]]:
+    from ase import Atoms
     structure_lst = []
+    structure_ase = Atoms.fromdict(structure)
     for strain in strain_lst:
-        structure_strain = structure.copy()
+        structure_strain = structure_ase.copy()
         structure_strain.set_cell(
             structure_strain.cell * strain ** (1 / 3), scale_atoms=True
         )
@@ -31,6 +33,20 @@ def generate_structures(
 
     return_dict = {f"qe_{str(i)}": atoms for i, atoms in enumerate(structure_lst)}
     return {"scaled_atoms": return_dict}
+
+# def generate_structures(
+#     structure: Atoms, strain_lst: list[float]
+# ) -> dict[str, dict[str, Atoms]]:
+#     structure_lst = []
+#     for strain in strain_lst:
+#         structure_strain = structure.copy()
+#         structure_strain.set_cell(
+#             structure_strain.cell * strain ** (1 / 3), scale_atoms=True
+#         )
+#         structure_lst.append(structure_strain)
+
+#     return_dict = {f"qe_{str(i)}": atoms for i, atoms in enumerate(structure_lst)}
+#     return {"scaled_atoms": return_dict}
 
 
 def calculate_qe(working_directory, input_dict, structure):
@@ -136,9 +152,23 @@ def calculate_qe(working_directory, input_dict, structure):
 
     outputs = _collect_output(working_directory=working_directory)
 
-    import ipdb; ipdb.set_trace()
+    # import ipdb; ipdb.set_trace()
 
     return outputs
+
+
+def plot_energy_volume_curve(qe_results):
+
+    import matplotlib.pyplot as plt
+
+    # import ipdb; ipdb.set_trace()
+    energy_lst = [entry['energy'] for entry in qe_results.values()]
+    volume_lst = [entry['volume'] for entry in qe_results.values()]
+
+    plt.plot(volume_lst, energy_lst)
+    plt.xlabel("Volume")
+    plt.ylabel("Energy")
+    plt.savefig("evcurve.png")
 
 
 # ! `to_dict` returns np arrays, and importantly a numpy boolean array for PBC that cannot be serialized:
