@@ -37,7 +37,8 @@ def generate_structures(
         )
         structure_lst.append(structure_strain)
 
-    return_dict = {f"qe_{str(i)}": atoms for i, atoms in enumerate(structure_lst)}
+    return_dict = {f"s_{str(i)}": atoms for i, atoms in enumerate(structure_lst)}
+    # return return_dict
     return {"scaled_atoms": return_dict}
 
 
@@ -149,6 +150,11 @@ def calculate_qe(working_directory, input_dict, structure):
     return outputs
 
 
+# Other possibilities to make this work
+# Try also just normal code here, appending to WG within the for-loop
+# Also try to build an all_scf WG and pass it as a task
+# `return_atoms` optional
+# Convert Atoms into pure dict, also replacing np.bool
 def all_scf(structures, input_dict):
     # Possibly, in this solution, the links of the individual SCF calcs are not resolved in the repr
     from atomistic_engine_unification.calculate_funcs_aiida_wg_pythonjob import calculate_qe

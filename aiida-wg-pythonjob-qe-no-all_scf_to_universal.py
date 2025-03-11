@@ -14,7 +14,7 @@ from adis_tools.parsers import parse_pw
 from ase.io import write
 
 from aiida import load_profile, orm
-from aiida_workgraph import WorkGraph, task
+from aiida_workgraph import WorkGraph, task, map_
 from atomistic_engine_unification.calculate_funcs_aiida_wg_pythonjob import (
     get_bulk_structure,
     calculate_qe,
@@ -30,8 +30,8 @@ pseudo_path = Path(
     "/home/geiger_j/aiida_projects/adis/git-repos/compare-workflow-graphs/pseudos"
 )
 # pseudo_path = pathlib.Path.cwd() / "pseudos"
-strain_lst = [0.9, 0.95, 1, 1.05, 1.10]
-# strain_lst = [0.9, 1]
+# strain_lst = [0.9, 0.95, 1, 1.05, 1.10]
+strain_lst = [0.9, 1]
 
 scf_input_dict = {
     "pseudopotentials": pseudopotentials,
@@ -47,8 +47,8 @@ relax_input_dict = {
     "pseudopotentials": pseudopotentials,
     "kpts": (1, 1, 1),  # (3, 3, 3),
     # "kpts": (3, 3, 3),
-    # "calculation": "scf",  # "vc-relax",
-    "calculation": "vc-relax",
+    "calculation": "scf",  # "vc-relax",
+    # "calculation": "vc-relax",
     "smearing": 0.02,
 }
 
@@ -112,25 +112,55 @@ generate_structures_task = wg.add_task(
     strain_lst=strain_lst,
 )
 
-all_scf_task = wg.add_task(
-    all_scf_dec,
-    name='all_scf',
-    structures=generate_structures_task.outputs.scaled_atoms,
-    input_dict=scf_input_dict
+# import ipdb; ipdb.set_trace()
+
+# for istrain, strain in enumerate(strain_lst):
+
+#     structure_key =f"s_{istrain}"
+#     scf_key =f"qe_{istrain}"
+
+    # set_dict = {**scf_input_dict, **{'working_directory': scf_key}}
+
+map_(wg.tasks.generate_structures.outputs.scaled_atoms)(
+    wg.add_task(
+        calculate_qe_dec,
+        name='scf',
+        structure='{{map_input}}',
+        working_directory='scf',  # scf_key
+        input_dict=scf_input_dict,
+    ),
+    # wg.tasks.scf.set(scf_input_dict),
 )
 
-plot_energy_volume_curve_task = wg.add_task(
-    plot_energy_volume_curve_dec,
-    name='plot_energy_volume_curve',
-    qe_results=all_scf_task.outputs.qe_results,
-)
 
-wg.to_html()
+    # scf_task = wg.add_task(
+    #     calculate_qe_dec,
+    #     name=scf_key,
+    #     input_dict=scf_input_dict,
+    #     working_directory=scf_key,
+    #     # structure=generate_structures_task.outputs[structure_key],
+    # )
+
+# all_scf_task = wg.add_task(
+#     all_scf_dec,
+#     name='all_scf',
+#     structures=generate_structures_task.outputs.scaled_atoms,
+#     input_dict=scf_input_dict
+# )
+
+# plot_energy_volume_curve_task = wg.add_task(
+#     plot_energy_volume_curve_dec,
+#     name='plot_energy_volume_curve',
+#     qe_results=all_scf_task.outputs.qe_results,
+# )
+
+# wg.to_html()
 wg_dict = wg.to_dict()
 # wg.run()
 
-
 # import ipdb; ipdb.set_trace()
+
+# raise SystemExit()
 
 # wg.run()
 
@@ -160,6 +190,11 @@ def get_edges_list(wg_dict):
             )
 
     return edges_label_lst
+
+edges_label_lst = get_edges_list(wg_dict=wg_dict)
+
+print("EDGES_LABEL_LIST")
+pprint(edges_label_lst)
 
 
 kwargs_dict, function_dict = {}, {}
@@ -201,6 +236,7 @@ for task_name, task_dict in wg_dict["tasks"].items():
         executor = NodeExecutor(**task_dict['executor']).executor
         function_dict[task_name] = executor
     except:
+
         ipdb.set_trace()
 
     # function_dict[task_name] = task_dict["executor"]["callable"]
