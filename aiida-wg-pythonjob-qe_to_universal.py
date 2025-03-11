@@ -1,5 +1,4 @@
 # ! Specify Python Code manually to point to executable of my Python venv
-# !
 
 
 from pathlib import Path
@@ -19,6 +18,7 @@ from atomistic_engine_unification.calculate_funcs_aiida_wg_pythonjob import (
     get_bulk_structure,
     calculate_qe,
     generate_structures,
+    # plot_energy_volume_curve
 )
 
 load_profile()
@@ -189,5 +189,10 @@ all_scf_task = wg.add_task(
     structures=generate_structures_task.outputs.scaled_atoms,
     input_dict=scf_input_dict
 )
+
+
+d = wg.to_dict()
+
+import ipdb; ipdb.set_trace()
 
 wg.run()

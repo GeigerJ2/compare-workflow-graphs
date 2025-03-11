@@ -44,6 +44,7 @@ def calculate_qe(working_directory, input_dict, structure):
     import shutil
     import subprocess
     from ase.io import write
+    import numpy as np
 
     def _write_input(input_dict: dict, structure: Atoms, working_directory: str | Path):
         filename = os.path.join(working_directory, "input.pwi")
@@ -71,24 +72,56 @@ def calculate_qe(working_directory, input_dict, structure):
             tprnfor=True,
         )
 
-    def _collect_output(working_directory="."):  # , return_atoms=True):
+    def _collect_output(working_directory="."):
+
         # FIXME: Installed it in OS Python for now, until I know how to use specific Python venv in PythonJob
         from adis_tools.parsers import parse_pw
 
         output = parse_pw(os.path.join(working_directory, "pwscf.xml"))
-        # if return_atoms:
+
+        def atoms_to_json_dict(atoms):
+            """
+            Convert an ASE Atoms object to a fully JSON-serializable dictionary
+            that uses only Python base data types.
+
+            Parameters:
+            -----------
+            atoms : ase.Atoms
+                The Atoms object to convert
+
+            Returns:
+            --------
+            dict
+                A dictionary representation using only Python base types
+            """
+            # Get the dictionary representation from ASE
+            atoms_dict = atoms.todict()
+
+            # Create a new dictionary with JSON-serializable values
+            json_dict = {}
+
+            # Convert numpy arrays to lists
+            for key, value in atoms_dict.items():
+                if isinstance(value, np.ndarray):
+                    # Convert numpy boolean values to Python booleans
+                    if value.dtype == np.bool_ or value.dtype == bool:
+                        json_dict[key] = value.tolist()
+                    # Convert numpy arrays of numbers to Python lists
+                    else:
+                        json_dict[key] = value.tolist()
+                else:
+                    json_dict[key] = value
+
+            return json_dict
+
+        structure_ase = output["ase_structure"]
+        structure_json = atoms_to_json_dict(atoms=structure_ase)
+
         return {
-            "structure": output["ase_structure"],
+            "structure": structure_json,
             "energy": output["energy"],
             "volume": output["ase_structure"].get_volume(),
         }
-        # else:
-        #     return {
-        #         "energy": output["energy"],
-        #         "volume": output["ase_structure"].get_volume(),
-        #     }
-
-    # import ipdb; ipdb.set_trace()
 
     _write_input(
         input_dict=input_dict,
