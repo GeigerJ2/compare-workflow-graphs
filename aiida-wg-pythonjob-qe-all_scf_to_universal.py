@@ -125,8 +125,9 @@ plot_energy_volume_curve_task = wg.add_task(
     qe_results=all_scf_task.outputs.qe_results,
 )
 
-wg.to_html()
+wg.to_html('wg-pythonjob_all_scf.html')
 wg_dict = wg.to_dict()
+
 # wg.run()
 
 
@@ -135,78 +136,78 @@ wg_dict = wg.to_dict()
 # wg.run()
 
 
-# ! This seems eerily similar to the `NodeLink` class from node-graph
-def get_edges_list(wg_dict):
+# # ! This seems eerily similar to the `NodeLink` class from node-graph
+# def get_edges_list(wg_dict):
 
-    edges_label_lst = []
-    for link_dict in wg_dict["links"]:
-        if link_dict["from_socket"] == "result":
-            edges_label_lst.append(
-                {
-                    "target": link_dict["to_node"],
-                    "targetHandle": link_dict["to_socket"],
-                    "source": link_dict["from_node"],
-                    "sourceHandle": None,
-                }
-            )
-        else:
-            edges_label_lst.append(
-                {
-                    "target": link_dict["to_node"],
-                    "targetHandle": link_dict["to_socket"],
-                    "source": link_dict["from_node"],
-                    "sourceHandle": link_dict["from_socket"],
-                }
-            )
+#     edges_label_lst = []
+#     for link_dict in wg_dict["links"]:
+#         if link_dict["from_socket"] == "result":
+#             edges_label_lst.append(
+#                 {
+#                     "target": link_dict["to_node"],
+#                     "targetHandle": link_dict["to_socket"],
+#                     "source": link_dict["from_node"],
+#                     "sourceHandle": None,
+#                 }
+#             )
+#         else:
+#             edges_label_lst.append(
+#                 {
+#                     "target": link_dict["to_node"],
+#                     "targetHandle": link_dict["to_socket"],
+#                     "source": link_dict["from_node"],
+#                     "sourceHandle": link_dict["from_socket"],
+#                 }
+#             )
 
-    return edges_label_lst
-
-
-kwargs_dict, function_dict = {}, {}
-
-from node_graph.executor import NodeExecutor
-
-for task_name, task_dict in wg_dict["tasks"].items():
-
-    # Extract relevant input variable names (excluding metadata and _wait)
-    input_variables = []
-    for param in task_dict["inputs"]:
-        if not param.startswith("metadata") and not param.startswith("_wait") and not param.startswith('monitors'):
-            input_variables.append(param)
-
-    # Prepare input keyword arguments
-    input_kwargs = {}
-
-    for param in input_variables:
-        print(f"PARAM: {param}")
-        try:
-            property_value = task_dict["inputs"][param]["property"]["value"]
-        except:
-            # ipdb.set_trace()
-            # raise
-            pass
-
-        if isinstance(property_value, dict):
-            try:
-                input_kwargs[param] = property_value.value
-            except:
-                input_kwargs[param] = property_value
-                # ipdb.set_trace()
-        else:
-            input_kwargs[param] = property_value
-
-    # function_dict[task_name] = loads(task_dict['executor']['callable']).process_class._func
-    kwargs_dict[task_name] = input_kwargs
-    try:
-        executor = NodeExecutor(**task_dict['executor']).executor
-        function_dict[task_name] = executor
-    except:
-        ipdb.set_trace()
-
-    # function_dict[task_name] = task_dict["executor"]["callable"]
+#     return edges_label_lst
 
 
-print("KWARGS_DICT")
-pprint(kwargs_dict)
-print("FUNCTION_DICT")
-pprint(function_dict)
+# kwargs_dict, function_dict = {}, {}
+
+# from node_graph.executor import NodeExecutor
+
+# for task_name, task_dict in wg_dict["tasks"].items():
+
+#     # Extract relevant input variable names (excluding metadata and _wait)
+#     input_variables = []
+#     for param in task_dict["inputs"]:
+#         if not param.startswith("metadata") and not param.startswith("_wait") and not param.startswith('monitors'):
+#             input_variables.append(param)
+
+#     # Prepare input keyword arguments
+#     input_kwargs = {}
+
+#     for param in input_variables:
+#         print(f"PARAM: {param}")
+#         try:
+#             property_value = task_dict["inputs"][param]["property"]["value"]
+#         except:
+#             # ipdb.set_trace()
+#             # raise
+#             pass
+
+#         if isinstance(property_value, dict):
+#             try:
+#                 input_kwargs[param] = property_value.value
+#             except:
+#                 input_kwargs[param] = property_value
+#                 # ipdb.set_trace()
+#         else:
+#             input_kwargs[param] = property_value
+
+#     # function_dict[task_name] = loads(task_dict['executor']['callable']).process_class._func
+#     kwargs_dict[task_name] = input_kwargs
+#     try:
+#         executor = NodeExecutor(**task_dict['executor']).executor
+#         function_dict[task_name] = executor
+#     except:
+#         ipdb.set_trace()
+
+#     # function_dict[task_name] = task_dict["executor"]["callable"]
+
+
+# print("KWARGS_DICT")
+# pprint(kwargs_dict)
+# print("FUNCTION_DICT")
+# pprint(function_dict)

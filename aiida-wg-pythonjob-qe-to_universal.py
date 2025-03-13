@@ -114,6 +114,9 @@ generate_structures_task = wg.add_task(
 
 # wg.run()
 
+wg.to_html('wg-pythonjob_bare.html')
+wg_dict = wg.to_dict()
+
 ipdb.set_trace()
 
 for istrain, strain in enumerate(strain_lst):
@@ -124,11 +127,10 @@ for istrain, strain in enumerate(strain_lst):
     scf_task = wg.add_task(
         calculate_qe_dec,
         name=task_name,
-        # Possibly create sockets on access for dynamic namespaces ???
+        # ? Possibly create sockets on access for dynamic namespaces ???
         # structure=generate_structures_task.outputs.scaled_atoms[istrain],
         # structure=generate_structures_task.outputs.scaled_atoms.get(key),
-
-        # _Some_ syntax that says get element x, even before execution
+        # _Some_ syntax that says get element x, even before execution -> Context ???
         input_dict=scf_input_dict,
         working_directory=task_name,
     )
@@ -146,8 +148,9 @@ for istrain, strain in enumerate(strain_lst):
 #     qe_results=all_scf_task.outputs.qe_results,
 # )
 
-wg.to_html()
-wg_dict = wg.to_dict()
+# wg.to_html('wg-pythonjob_bare.html')
+# wg_dict = wg.to_dict()
+
 # wg.run()
 
 

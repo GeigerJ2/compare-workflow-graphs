@@ -137,6 +137,7 @@ for i, strain in enumerate(strain_lst):
     wg.add_link(wg.tasks.calculation_scf.outputs.result, get_dict_task.inputs.kwargs)
     wg.add_link(wg.tasks.kpts.outputs.result, get_dict_task.inputs.kwargs)
     wg.add_link(wg.tasks.pseudopotentials.outputs.result, get_dict_task.inputs.kwargs)
+
     qe_task = wg.add_task(
         calculate_qe_dec,
         name=f"qe_{i}",

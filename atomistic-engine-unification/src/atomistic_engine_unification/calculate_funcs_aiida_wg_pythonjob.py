@@ -169,7 +169,6 @@ def all_scf(structures, input_dict):
         qe_results[key] = qe_result
 
     return qe_results
-    # return {'test': 5}
 
 
 def plot_energy_volume_curve(qe_results):
