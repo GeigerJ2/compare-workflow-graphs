@@ -193,56 +193,82 @@ def get_edges_list(wg_dict):
 
 edges_label_lst = get_edges_list(wg_dict=wg_dict)
 
-print("EDGES_LABEL_LIST")
-pprint(edges_label_lst)
+# print("EDGES_LABEL_LIST")
+# pprint(edges_label_lst)
 
 
 kwargs_dict, function_dict = {}, {}
 
 from node_graph.executor import NodeExecutor
 
-for task_name, task_dict in wg_dict["tasks"].items():
+# for task_name, task_dict in wg_dict["tasks"].items():
 
-    # Extract relevant input variable names (excluding metadata and _wait)
-    input_variables = []
-    for param in task_dict["inputs"]:
-        if not param.startswith("metadata") and not param.startswith("_wait") and not param.startswith('monitors'):
-            input_variables.append(param)
+#     # Extract relevant input variable names (excluding metadata and _wait)
+#     input_variables = []
+#     for param in task_dict["inputs"]:
+#         if not param.startswith("metadata") and not param.startswith("_wait") and not param.startswith('monitors'):
+#             input_variables.append(param)
 
-    # Prepare input keyword arguments
-    input_kwargs = {}
+#     # Prepare input keyword arguments
+#     input_kwargs = {}
 
-    for param in input_variables:
-        print(f"PARAM: {param}")
-        try:
-            property_value = task_dict["inputs"][param]["property"]["value"]
-        except:
-            # ipdb.set_trace()
-            # raise
-            pass
+#     for param in input_variables:
+#         print(f"PARAM: {param}")
+#         try:
+#             property_value = task_dict["inputs"][param]["property"]["value"]
+#         except:
+#             # ipdb.set_trace()
+#             # raise
+#             pass
 
-        if isinstance(property_value, dict):
-            try:
-                input_kwargs[param] = property_value.value
-            except:
-                input_kwargs[param] = property_value
-                # ipdb.set_trace()
-        else:
-            input_kwargs[param] = property_value
+#         if isinstance(property_value, dict):
+#             try:
+#                 input_kwargs[param] = property_value.value
+#             except:
+#                 input_kwargs[param] = property_value
+#                 # ipdb.set_trace()
+#         else:
+#             input_kwargs[param] = property_value
 
-    # function_dict[task_name] = loads(task_dict['executor']['callable']).process_class._func
-    kwargs_dict[task_name] = input_kwargs
-    try:
-        executor = NodeExecutor(**task_dict['executor']).executor
-        function_dict[task_name] = executor
-    except:
+#     # function_dict[task_name] = loads(task_dict['executor']['callable']).process_class._func
+#     kwargs_dict[task_name] = input_kwargs
+#     try:
+#         executor = NodeExecutor(**task_dict['executor']).executor
+#         function_dict[task_name] = executor
+#     except:
 
+#         ipdb.set_trace()
+
+#     # function_dict[task_name] = task_dict["executor"]["callable"]
+
+
+# print("KWARGS_DICT")
+# pprint(kwargs_dict)
+# print("FUNCTION_DICT")
+# pprint(function_dict)
+
+def write_workflow_json(wg):
+    wgdata = wg.to_dict()
+    data = {"nodes": {}, "edges": []}
+    node_name_mapping = {}
+    i = 0
+    for name, node in wgdata["tasks"].items():
         ipdb.set_trace()
+        node_name_mapping[name] = i
+        callable_name = node["executor"]["callable_name"]
+        data["nodes"][i] = callable_name
+        if callable_name == "pickle_node":
+            data["nodes"][i] = node["inputs"]["value"]["property"]["value"].value
+        i += 1
 
-    # function_dict[task_name] = task_dict["executor"]["callable"]
+    for link in wgdata["links"]:
+        if wgdata["tasks"][link["from_node"]]["executor"]["callable_name"] == "pickle_node":
+            link["from_socket"] = None
+        link["from_node"] = node_name_mapping[link["from_node"]]
+        link["to_node"] = node_name_mapping[link["to_node"]]
+        data["edges"].append(link)
 
+    return data
 
-print("KWARGS_DICT")
-pprint(kwargs_dict)
-print("FUNCTION_DICT")
-pprint(function_dict)
+wf_data = write_workflow_json(wg=wg)
+pprint(wf_data)
